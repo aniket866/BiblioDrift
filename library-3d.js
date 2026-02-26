@@ -201,6 +201,22 @@ const SAMPLE_BOOKS = {
         { name: 'DreamChaser', rating: 5, text: 'A beautiful and inspiring tale about following your dreams.' },
         { name: 'BookWorm99', rating: 4, text: 'Simple yet powerful storytelling with deep meaning.' }
     ]
+},
+{
+    id: 'sample-13',
+    title: 'Atomic Habits',
+    author: 'James Clear',
+    cover: 'https://covers.openlibrary.org/b/id/9251996-M.jpg',
+    rating: 4.6,
+    ratingCount: 8432,
+    description: 'A practical guide to building good habits and breaking bad ones. James Clear explains how small daily improvements compound into remarkable long-term results.',
+    categories: ['Self-Help', 'Productivity', 'Personal Development'],
+    spineColor: '#2E8B57',
+    textColor: '#FFFFFF',
+    reviews: [
+        { name: 'GrowthMindset', rating: 5, text: 'Life-changing insights on building sustainable habits.' },
+        { name: 'FocusBuilder', rating: 4, text: 'Actionable advice backed by science and real examples.' }
+    ]
 }
 
     ]
