@@ -217,8 +217,23 @@ const SAMPLE_BOOKS = {
         { name: 'GrowthMindset', rating: 5, text: 'Life-changing insights on building sustainable habits.' },
         { name: 'FocusBuilder', rating: 4, text: 'Actionable advice backed by science and real examples.' }
     ]
+},
+{
+    id: 'sample-14',
+    title: 'Deep Work',
+    author: 'Cal Newport',
+    cover: 'https://covers.openlibrary.org/b/id/8370226-M.jpg',
+    rating: 4.5,
+    ratingCount: 6921,
+    description: 'A powerful guide to mastering focused success in a distracted world. Cal Newport explains how cultivating deep, concentrated work can dramatically improve productivity and create meaningful results in professional and personal life.',
+    categories: ['Productivity', 'Self-Improvement', 'Career Development'],
+    spineColor: '#1E3A8A',
+    textColor: '#FFFFFF',
+    reviews: [
+        { name: 'CodeMaster', rating: 5, text: 'A must-read for anyone serious about improving focus and output.' },
+        { name: 'SilentAchiever', rating: 4, text: 'Great framework for eliminating distractions and building deep concentration.' }
+    ]
 }
-
     ]
 };
 
