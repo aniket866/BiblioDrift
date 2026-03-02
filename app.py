@@ -4,6 +4,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from sqlalchemy.orm import joinedload
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
@@ -486,7 +487,7 @@ def get_library(user_id):
         return jsonify({"error": "Unauthorized"}), 403
         
     try:
-        items = ShelfItem.query.filter_by(user_id=user_id).all()
+        items = ShelfItem.query.options(joinedload(ShelfItem.book)).filter_by(user_id=user_id).all()
         # Ensure join loads correctly or use manual load if lazy loading fails
         return jsonify({"library": [item.to_dict() for item in items]}), 200
     except Exception as e:
