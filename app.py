@@ -456,7 +456,7 @@ def add_to_library():
                 thumbnail=data.get('thumbnail', '')
             )
             db.session.add(book)
-            db.session.commit() # Commit to get book.id
+            db.session.flush() # Flush to get book.id without committing
 
         # Check if ShelfItem exists
         existing_item = ShelfItem.query.filter_by(user_id=data['user_id'], book_id=book.id).first()
@@ -584,7 +584,7 @@ def sync_library():
                     thumbnail=image_links.get('thumbnail', '')
                 )
                 db.session.add(book)
-                db.session.commit() # Need ID for next step
+                db.session.flush() # Flush to get book.id without committing
 
             # 2. Check ShelfItem
             existing_item = ShelfItem.query.filter_by(user_id=user_id, book_id=book.id).first()
