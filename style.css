@@ -35,6 +35,39 @@
     --z-toast: 2000;
 }
 
+/* Infinite Scroll Sentinel */
+.scroll-sentinel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 2rem;
+    width: 100%;
+    color: var(--text-muted, #777);
+    transition: opacity 0.3s ease;
+}
+
+.scroll-sentinel.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.scroll-sentinel .fa-spinner {
+    color: var(--text-muted);
+    animation: spin 1s linear infinite;
+}
+
+.cozy-text {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 [data-theme="night"] {
     /* Night Theme (Dark Wood) */
     --bg-color: #1e1a18;
