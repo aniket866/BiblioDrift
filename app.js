@@ -79,6 +79,33 @@ const SafeStorage = {
         } catch (e) {
             return null;
         }
+    },
+
+    /**
+     * Safely removes data from localStorage.
+     * @param {string} key 
+     */
+    remove(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.error("LocalStorage Remove Error:", e);
+            return false;
+        }
+    },
+
+    /**
+     * Safely clears all localStorage.
+     */
+    clear() {
+        try {
+            localStorage.clear();
+            return true;
+        } catch (e) {
+            console.error("LocalStorage Clear Error:", e);
+            return false;
+        }
     }
 };
 const MOCK_BOOKS = [
@@ -388,7 +415,8 @@ class BookRenderer {
 class LibraryManager {
     constructor() {
         this.storageKey = 'bibliodrift_library';
-        this.library = JSON.parse(localStorage.getItem(this.storageKey)) || {
+        const stored = SafeStorage.get(this.storageKey);
+        this.library = stored ? JSON.parse(stored) : {
             current: [],
             want: [],
             finished: []
@@ -401,12 +429,12 @@ class LibraryManager {
     }
 
     getUser() {
-        const userStr = localStorage.getItem('bibliodrift_user');
+        const userStr = SafeStorage.get('bibliodrift_user');
         return userStr ? JSON.parse(userStr) : null;
     }
 
     getAuthHeaders() {
-        const token = localStorage.getItem('bibliodrift_token');
+        const token = SafeStorage.get('bibliodrift_token');
         return new Headers({
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -945,7 +973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isLoggedIn = SafeStorage.get('isLoggedIn') === 'true';
     const authLink = document.getElementById('navAuthLink');
     if (isLoggedIn && authLink) {
         authLink.innerHTML = '<i class="fa-solid fa-user"></i>';
@@ -1056,7 +1084,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Logout
         document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('bibliodrift_user');
+            SafeStorage.remove('bibliodrift_user');
+            SafeStorage.remove('bibliodrift_token');
             window.location.href = 'index.html';
         });
     }
@@ -1082,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const exportBtn = document.getElementById("export-library");
         if (exportBtn) {
             exportBtn.addEventListener("click", () => {
-                const library = localStorage.getItem("bibliodrift_library");
+                const library = SafeStorage.get("bibliodrift_library");
                 if (!library) {
                     showToast("Library is empty!", "info");
                     return;
@@ -1156,9 +1185,9 @@ async function handleAuth(event) {
             // Success!
             // Store Access Token and User Info
             if (data.access_token) {
-                localStorage.setItem('bibliodrift_token', data.access_token);
+                SafeStorage.set('bibliodrift_token', data.access_token);
             }
-            localStorage.setItem('bibliodrift_user', JSON.stringify(data.user));
+            SafeStorage.set('bibliodrift_user', JSON.stringify(data.user));
 
             if (typeof showToast === 'function')
                 showToast(`${mode === 'login' ? 'Welcome back' : 'Welcome'}, ${data.user.username}!`, "success");
