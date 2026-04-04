@@ -2,6 +2,8 @@
 
 This document is tailored for contributors participating in the open source event Sourcery by ACM IGDTUW.
 
+[![BiblioDrift - Issues](https://img.shields.io/badge/BiblioDrift-Issues-9113ff?style=for-the-badge)](https://github.com/devanshi14malhotra/BiblioDrift/issues)
+
 ## 1. Project Overview
 
 ### Description
