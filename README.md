@@ -1,4 +1,5 @@
 # BiblioDrift 📚☕
+[![Netlify Live App - Click here to view!](https://img.shields.io/badge/Netlify-Live%20App-5314C4?logo=netlify)](https://gitcanvas-dm.streamlit.app/)
 
 > **"Find yourself in the pages."**
 
