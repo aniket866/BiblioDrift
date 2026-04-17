@@ -5,7 +5,7 @@ const createFooter = () => {
         <!-- Brand Section -->
         <div class="footer-brand">
           <a href="index.html" class="logo">
-            <img style="height: 40px" src="biblioDrift_favicon.png" alt="BiblioDrift Logo"> BiblioDrift
+            <img style="height: 40px" src="../assets/images/biblioDrift_favicon.png" alt="BiblioDrift Logo"> BiblioDrift
           </a>
           <p class="footer-tagline">"There is no frigate like a book to take us lands away."</p>
           <p class="footer-subtext">— Emily Dickinson</p>
@@ -19,6 +19,14 @@ const createFooter = () => {
             <li><a href="library.html">My Library</a></li>
             <li><a href="chat.html">Literary Chat</a></li>
             <li><a href="auth.html">Account</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-legal">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms-and-conditions.html">Terms & Conditions</a></li>
           </ul>
         </div>
 
