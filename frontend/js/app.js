@@ -519,7 +519,34 @@ class BookRenderer {
         document.getElementById('modal-author').textContent = book.volumeInfo.authors?.join(", ") || "Unknown Author";
         document.getElementById('modal-summary').textContent = book.volumeInfo.description || "No description available.";
 
+        const addBtn = document.getElementById('modal-add-btn');
         const shareBtn = document.getElementById('modal-share-btn');
+        const isInLibrary = this.libraryManager && typeof this.libraryManager.findBook === 'function' && this.libraryManager.findBook(book.id);
+
+        if (addBtn) {
+            addBtn.onclick = null;
+            addBtn.classList.toggle('library-remove-btn', isInLibrary);
+            addBtn.innerHTML = isInLibrary
+                ? '<i class="fa-solid fa-trash"></i> Remove from Library'
+                : '<i class="fa-regular fa-heart"></i> Add to Library';
+
+            addBtn.onclick = async () => {
+                if (!this.libraryManager) return;
+
+                if (isInLibrary) {
+                    if (confirm('Are you sure you want to remove this book from your library?')) {
+                        await this.libraryManager.removeBook(book.id);
+                        modal.close();
+                    }
+                    return;
+                }
+
+                await this.libraryManager.addBook(book, 'want');
+                addBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Remove from Library';
+                addBtn.classList.add('library-remove-btn');
+            };
+        }
+
         if (shareBtn) {
             shareBtn.onclick = () => {
                 const shareText = `Check out this book: ${book.volumeInfo.title} by ${book.volumeInfo.authors?.join(", ") || "Unknown Author"}`;
