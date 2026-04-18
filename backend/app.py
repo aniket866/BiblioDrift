@@ -325,6 +325,12 @@ def handle_analyze_mood():
 @rate_limit('mood_tags')
 def handle_mood_tags():
     """Get mood tags for a book."""
+    from exceptions import (
+        LLMCircuitBreakerOpenError, AIServiceException, 
+        ValidationException, InvalidInputError
+    )
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -341,13 +347,26 @@ def handle_mood_tags():
             data={"mood_tags": mood_tags}
         )
         
+    except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+        logger.error(f"AI service error in handle_mood_tags: {e}", exc_info=True)
+        return handle_exception(e, "handle_mood_tags")
+    except (ValidationException, InvalidInputError) as e:
+        logger.warning(f"Validation error in handle_mood_tags: {e}")
+        return handle_exception(e, "handle_mood_tags")
     except Exception as e:
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in handle_mood_tags: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "handle_mood_tags")
 
 @app.route('/api/v1/mood-search', methods=['POST'])
 @rate_limit('mood_search')
 def handle_mood_search():
     """Search for books based on mood/vibe."""
+    from exceptions import (
+        LLMCircuitBreakerOpenError, AIServiceException,
+        ValidationException, InvalidInputError
+    )
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -366,13 +385,27 @@ def handle_mood_search():
             }
         )
         
+    except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+        logger.error(f"AI service error in handle_mood_search: {e}", exc_info=True)
+        return handle_exception(e, "handle_mood_search")
+    except (ValidationException, InvalidInputError) as e:
+        logger.warning(f"Validation error in handle_mood_search: {e}")
+        return handle_exception(e, "handle_mood_search")
     except Exception as e:
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in handle_mood_search: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "handle_mood_search")
 
 @app.route('/api/v1/generate-note', methods=['POST'])
 @rate_limit('generate_note')
 def handle_generate_note():
     """Generate AI-powered book recommendation with vibe support."""
+    from exceptions import (
+        LLMCircuitBreakerOpenError, AIServiceException,
+        DatabaseQueryError, DatabaseIntegrityError,
+        ValidationException, InvalidInputError
+    )
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -388,13 +421,20 @@ def handle_generate_note():
         vibe = getattr(validated_data, 'vibe', 'cozy discovery')
         
         # Check cache
-        cached_note = BookNote.query.filter_by(book_title=title, book_author=author).first()
-        if cached_note:
-            logger.debug(f"Cache hit for {title} by {author}")
-            return success_response(data={"vibe": cached_note.content})
+        try:
+            cached_note = BookNote.query.filter_by(book_title=title, book_author=author).first()
+            if cached_note:
+                logger.debug(f"Cache hit for {title} by {author}")
+                return success_response(data={"vibe": cached_note.content})
+        except Exception as e:
+            logger.warning(f"Cache lookup failed for {title} by {author}: {e}")
         
         # Generate AI recommendation with vibe context
-        recommendation = generate_book_note(description, title, author, vibe)
+        try:
+            recommendation = generate_book_note(description, title, author, vibe)
+        except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+            logger.error(f"LLM error in handle_generate_note: {e}")
+            return handle_exception(e, "handle_generate_note")
         
         # Save to cache if we have valid data
         try:
@@ -409,19 +449,37 @@ def handle_generate_note():
                 new_note = BookNote(book_title=title, book_author=author, content=recommendation)
                 db.session.add(new_note)
                 db.session.commit()
-        except Exception as e:
-            logger.error(f"Failed to cache note: {e}")
+        except (DatabaseQueryError, DatabaseIntegrityError) as e:
+            logger.error(f"Database error caching note: {e}")
             db.session.rollback()
+            return handle_exception(e, "handle_generate_note (cache)")
+        except Exception as e:
+            logger.error(f"Failed to cache note: {type(e).__name__}: {e}")
+            db.session.rollback()
+            # Don't fail the request if caching fails - still return the recommendation
 
         return success_response(data=recommendation)
         
+    except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+        logger.error(f"AI service error in handle_generate_note: {e}", exc_info=True)
+        return handle_exception(e, "handle_generate_note")
+    except (ValidationException, InvalidInputError) as e:
+        logger.warning(f"Validation error in handle_generate_note: {e}")
+        return handle_exception(e, "handle_generate_note")
     except Exception as e:
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in handle_generate_note: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "handle_generate_note")
 
 @app.route('/api/v1/chat', methods=['POST'])
 @rate_limit('chat')
 def handle_chat():
     """Handle chat messages and generate bookseller responses."""
+    from exceptions import (
+        LLMCircuitBreakerOpenError, AIServiceException,
+        ValidationException, InvalidInputError
+    )
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -441,11 +499,15 @@ def handle_chat():
             else:
                 validated_history.append(msg)
         
-        # Generate contextual response based on conversation history
-        response = generate_chat_response(user_message, validated_history)
-        
-        # Try to get book recommendations based on the message
-        recommendations = get_ai_recommendations(user_message)
+        try:
+            # Generate contextual response based on conversation history
+            response = generate_chat_response(user_message, validated_history)
+            
+            # Try to get book recommendations based on the message
+            recommendations = get_ai_recommendations(user_message)
+        except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+            logger.error(f"LLM error in handle_chat: {e}")
+            return handle_exception(e, "handle_chat")
         
         return success_response(
             data={
@@ -455,8 +517,15 @@ def handle_chat():
             }
         )
         
+    except (LLMCircuitBreakerOpenError, AIServiceException) as e:
+        logger.error(f"AI service error in handle_chat: {e}", exc_info=True)
+        return handle_exception(e, "handle_chat")
+    except (ValidationException, InvalidInputError) as e:
+        logger.warning(f"Validation error in handle_chat: {e}")
+        return handle_exception(e, "handle_chat")
     except Exception as e:
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in handle_chat: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "handle_chat")
 
 @app.route('/api/v1/health', methods=['GET'])
 def health_check():
@@ -485,6 +554,10 @@ def health_check():
 @jwt_required()
 def add_to_library():
     """Add a book to the user's shelf."""
+    from sqlalchemy.exc import IntegrityError
+    from exceptions import DatabaseQueryError, DatabaseIntegrityError, ValidationException
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         current_user_id = get_jwt_identity()
@@ -498,40 +571,53 @@ def add_to_library():
         if str(validated_data.user_id) != str(current_user_id):
             return unauthorized_access_error("Cannot access another user's library")
         
-        # Check if the book exists in the Book table
-        book = Book.query.filter_by(google_books_id=validated_data.google_books_id).first()
-        if not book:
-            book = Book(
-                google_books_id=validated_data.google_books_id,
-                title=validated_data.title,
-                authors=validated_data.authors,
-                thumbnail=validated_data.thumbnail
-            )
-            db.session.add(book)
-            db.session.flush() # Flush to get book.id without committing
+        try:
+            # Check if the book exists in the Book table
+            book = Book.query.filter_by(google_books_id=validated_data.google_books_id).first()
+            if not book:
+                book = Book(
+                    google_books_id=validated_data.google_books_id,
+                    title=validated_data.title,
+                    authors=validated_data.authors,
+                    thumbnail=validated_data.thumbnail
+                )
+                db.session.add(book)
+                db.session.flush() # Flush to get book.id without committing
 
-        # Check if ShelfItem exists
-        existing_item = ShelfItem.query.filter_by(user_id=validated_data.user_id, book_id=book.id).first()
-        if existing_item:
-            # Update shelf if exists
-            existing_item.shelf_type = validated_data.shelf_type.value
-            item = existing_item
-        else:
-            item = ShelfItem(
-                user_id=validated_data.user_id,
-                book_id=book.id,
-                shelf_type=validated_data.shelf_type.value
+            # Check if ShelfItem exists
+            existing_item = ShelfItem.query.filter_by(user_id=validated_data.user_id, book_id=book.id).first()
+            if existing_item:
+                # Update shelf if exists
+                existing_item.shelf_type = validated_data.shelf_type.value
+                item = existing_item
+            else:
+                item = ShelfItem(
+                    user_id=validated_data.user_id,
+                    book_id=book.id,
+                    shelf_type=validated_data.shelf_type.value
+                )
+                db.session.add(item)
+            
+            db.session.commit()
+            return success_response(
+                data={"message": "Book added to shelf", "item": item.to_dict()},
+                status_code=201
             )
-            db.session.add(item)
-        
-        db.session.commit()
-        return success_response(
-            data={"message": "Book added to shelf", "item": item.to_dict()},
-            status_code=201
-        )
+        except IntegrityError as e:
+            logger.error(f"Database integrity error in add_to_library: {e}")
+            db.session.rollback()
+            return handle_exception(DatabaseIntegrityError(str(e)), "add_to_library")
+        except Exception as e:
+            logger.error(f"Database error in add_to_library: {type(e).__name__}: {e}")
+            db.session.rollback()
+            return handle_exception(DatabaseQueryError(str(e)), "add_to_library")
+    
+    except ValidationException as e:
+        logger.warning(f"Validation error in add_to_library: {e}")
+        return handle_exception(e, "add_to_library")
     except Exception as e:
-        db.session.rollback()
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in add_to_library: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "add_to_library")
 
 @app.route('/api/v1/library/<int:user_id>', methods=['GET'])
 @jwt_required()
@@ -791,6 +877,10 @@ def sync_library():
 @rate_limit('auth')
 def register():
     """Register a new user and return JWT token."""
+    from sqlalchemy.exc import IntegrityError
+    from exceptions import DatabaseIntegrityError, DatabaseQueryError, ValidationException
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -803,36 +893,53 @@ def register():
         email = validated_data.email
         password = validated_data.password
 
-        # check if user exists
-        if User.query.filter((User.username==username) | (User.email==email)).first():
-            return resource_exists_error("User")
+        try:
+            # Check if user exists
+            if User.query.filter((User.username==username) | (User.email==email)).first():
+                return resource_exists_error("User")
 
-        register_user(username, email, password)
-        # Fetch the user to get ID
-        user = User.query.filter_by(username=username).first()
-        
-        # Create JWT token
-        access_token = create_access_token(identity=str(user.id))
-        
-        return success_response(
-            data={
-                "message": "User registered successfully",
-                "access_token": access_token,
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email
-                }
-            },
-            status_code=201
-        )
+            register_user(username, email, password)
+            # Fetch the user to get ID
+            user = User.query.filter_by(username=username).first()
+            
+            # Create JWT token
+            access_token = create_access_token(identity=str(user.id))
+            
+            return success_response(
+                data={
+                    "message": "User registered successfully",
+                    "access_token": access_token,
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "email": user.email
+                    }
+                },
+                status_code=201
+            )
+        except IntegrityError as e:
+            logger.error(f"Integrity error during registration: {e}")
+            db.session.rollback()
+            return handle_exception(DatabaseIntegrityError(str(e)), "register")
+        except Exception as e:
+            logger.error(f"Database error during registration: {type(e).__name__}: {e}")
+            db.session.rollback()
+            return handle_exception(DatabaseQueryError(str(e)), "register")
+    
+    except ValidationException as e:
+        logger.warning(f"Validation error in register: {e}")
+        return handle_exception(e, "register")
     except Exception as e:
-        return validation_error(str(e))
+        logger.error(f"Unexpected error in register: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "register")
 
 @app.route('/api/v1/login', methods=['POST'])
 @rate_limit('auth')
 def login():
     """Authenticate user and return JWT token."""
+    from exceptions import DatabaseQueryError, ValidationException
+    from error_responses import handle_exception
+    
     try:
         data = request.get_json()
         
@@ -844,28 +951,37 @@ def login():
         username_or_email = validated_data.username
         password = validated_data.password
 
-        # Try to find user by username or email
-        user = User.query.filter((User.username==username_or_email) | (User.email==username_or_email)).first()
-        
-        if user and user.check_password(password):
-            # Create JWT token
-            access_token = create_access_token(identity=str(user.id))
+        try:
+            # Try to find user by username or email
+            user = User.query.filter((User.username==username_or_email) | (User.email==username_or_email)).first()
             
-            return success_response(
-                data={
-                    "message": "Login successful",
-                    "access_token": access_token,
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email
+            if user and user.check_password(password):
+                # Create JWT token
+                access_token = create_access_token(identity=str(user.id))
+                
+                return success_response(
+                    data={
+                        "message": "Login successful",
+                        "access_token": access_token,
+                        "user": {
+                            "id": user.id,
+                            "username": user.username,
+                            "email": user.email
+                        }
                     }
-                }
-            )
-            
-        return auth_error("Invalid username or password")
+                )
+                
+            return auth_error("Invalid username or password")
+        except Exception as e:
+            logger.error(f"Database error during login: {type(e).__name__}: {e}")
+            return handle_exception(DatabaseQueryError(str(e)), "login")
+    
+    except ValidationException as e:
+        logger.warning(f"Validation error in login: {e}")
+        return handle_exception(e, "login")
     except Exception as e:
-        return internal_error(str(e))
+        logger.error(f"Unexpected error in login: {type(e).__name__}: {e}", exc_info=True)
+        return handle_exception(e, "login")
 
 
 # ==================== READING STATS ENDPOINTS ====================
