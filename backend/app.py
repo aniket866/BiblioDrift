@@ -1206,22 +1206,46 @@ def get_leaderboard():
         return validation_error(error)
     
     try:
-        # Get all goals for the year and join with User to prevent N+1 queries.
-        # This executes a single SQL query matching both ReadingGoal and User 
-        # instead of making a separate query for each user in the loop.
-        goals_with_users = db.session.query(ReadingGoal, User).join(User).filter(ReadingGoal.year == year).all()
+        from sqlalchemy import func
+
+        # =========================================================================
+        # SQL Query Optimization
+        # This query has been optimized to resolve a severe N+1+N query pattern.
+        # Previously, `_get_yearly_stats` was called inside the leaderboard loop, 
+        # making additional queries per user. This made the database calls O(n).
+        # We now aggregate stats in a single SQL query using `GROUP BY user_id` 
+        # alongside the leaderboard goal query. By joining User and outer joining 
+        # ReadingStats, we sum `books_completed` and `pages_read` directly in SQL.
+        # =========================================================================
+        stats_query = db.session.query(
+            ReadingGoal.user_id,
+            User.username,
+            ReadingGoal.target_books,
+            func.coalesce(func.sum(ReadingStats.books_completed), 0).label('total_books'),
+            func.coalesce(func.sum(ReadingStats.pages_read), 0).label('total_pages')
+        ).join(
+            User, ReadingGoal.user_id == User.id
+        ).outerjoin(
+            ReadingStats, 
+            (ReadingGoal.user_id == ReadingStats.user_id) & (ReadingStats.year == year)
+        ).filter(
+            ReadingGoal.year == year
+        ).group_by(
+            ReadingGoal.user_id, User.username, ReadingGoal.target_books
+        ).all()
         
         leaderboard = []
-        for goal, user in goals_with_users:
-            yearly_stats = _get_yearly_stats(goal.user_id, year)
+        for user_id, username, target_books, total_books, total_pages in stats_query:
+            total_books_val = int(total_books)
+            total_pages_val = int(total_pages)
             
             leaderboard.append({
-                "user_id": goal.user_id,
-                "username": user.username if user else "Unknown",
-                "target_books": goal.target_books,
-                "books_completed": yearly_stats["total_books"],
-                "pages_read": yearly_stats["total_pages"],
-                "progress_percentage": round((yearly_stats["total_books"] / goal.target_books * 100), 1) if goal.target_books > 0 else 0
+                "user_id": user_id,
+                "username": username if username else "Unknown",
+                "target_books": target_books,
+                "books_completed": total_books_val,
+                "pages_read": total_pages_val,
+                "progress_percentage": round((total_books_val / target_books * 100), 1) if target_books > 0 else 0
             })
         
         # Sort by books completed descending
