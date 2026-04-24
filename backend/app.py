@@ -17,8 +17,13 @@ import logging
 from datetime import datetime, timedelta, timezone
 from sanitizer import sanitize_payload
 
-# Load environment variables from .env file BEFORE importing config
-load_dotenv()
+# Load environment variables from config directory based on APP_ENV
+env = os.getenv('APP_ENV', 'development')
+env_path = os.path.join(os.path.dirname(__file__), '..', 'config', f'.env.{env}')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
 
 from config import app_config, setup_logging
 from ai_service import generate_book_note, get_ai_recommendations, get_category_books, get_book_mood_tags_safe, generate_chat_response, llm_service
@@ -110,8 +115,9 @@ jwt = JWTManager(app)
 # The fix below restricts CORS to specific trusted origins. We can 
 # optionally load allowed origins from environment variables.
 # =====================================================================
-allowed_origins = os.environ.get("ALLOWED_ORIGINS", "https://bibliodrift.com").split(",")
-CORS(app, supports_credentials=True, origins=allowed_origins)
+# ALLOWED_ORIGINS=http://127.0.0.1:5500,http://localhost:5500,http://127.0.0.1:5000,http://localhost:5000
+# For development, we'll allow all to be safe, then restrict in prod
+CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5000", "http://localhost:5000"])
 
 # Initialize cache service
 cache_service.init_app(app)

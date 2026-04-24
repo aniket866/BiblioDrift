@@ -9,7 +9,12 @@ class ChatInterface {
         this.quickSuggestions = document.getElementById('quickSuggestions');
         
         this.conversationHistory = [];
-        this.isTyping = false;
+        this.isProcessing = false;
+        
+        // Ensure backend connection is initialized
+        if (typeof window !== 'undefined' && !window.MOOD_API_BASE) {
+            window.MOOD_API_BASE = 'http://127.0.0.1:5000/api/v1';
+        }
         
         this.init();
     }
@@ -93,14 +98,6 @@ class ChatInterface {
             });
         }
         
-        // Step 6: Additional HTML entity escaping for display safety
-        sanitized = sanitized
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;');
-        
         return sanitized;
     }
     
@@ -125,9 +122,11 @@ class ChatInterface {
     addWelcomeMessage() {
         const welcomeMessage = {
             type: 'bookseller',
-            content: `Hello! I'm your personal bookseller. I'm here to help you discover your next favorite book based on your mood, preferences, and what you're feeling like reading.
+            content: `Ah, a wandering soul has found their way through the door... Welcome.
 
-Tell me what kind of vibe you're looking for - maybe something cozy for a rainy evening, or an adventurous tale to spark your imagination?`,
+I am Elara — keeper of stories, reader of moods, and devoted guide to the worlds that live between pages. Whether your heart is heavy with rain or light as a summer afternoon, I will find you the perfect book.
+
+Tell me: what is stirring in you today?`,
             timestamp: new Date().toISOString()
         };
         
@@ -192,10 +191,10 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
             // Log error silently in production
             this.hideTypingIndicator();
             
-            // Add error message
+            // Add error message in Elara's voice
             const errorMessage = {
                 type: 'bookseller',
-                content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment, or let me suggest some popular books based on common preferences!",
+                content: "The candles are flickering and something seems amiss with my connection to the literary spirits. Give me a moment — the books are waiting, and so is the perfect story for you.",
                 timestamp: new Date().toISOString()
             };
             
@@ -210,7 +209,7 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
     async getBooksellerResponse(userMessage) {
         // First, try to use the dedicated chat endpoint
         try {
-            const moodApiBase = window.MOOD_API_BASE || '/api/v1';
+            const moodApiBase = window.MOOD_API_BASE || 'http://127.0.0.1:5000/api/v1';
             const chatResponse = await fetch(`${moodApiBase}/chat`, {
                 method: 'POST',
                 headers: {
@@ -239,7 +238,7 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
         
         // Fallback to mood search
         try {
-            const moodApiBase = window.MOOD_API_BASE || '/api/v1';
+            const moodApiBase = window.MOOD_API_BASE || 'http://127.0.0.1:5000/api/v1';
             const moodResponse = await fetch(`${moodApiBase}/mood-search`, {
                 method: 'POST',
                 headers: {
@@ -337,13 +336,42 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
         return response;
     }
     
+    /**
+     * Render lightweight markdown in AI responses.
+     * Supports: **bold** for book titles, *italic* for authors, \n\n for paragraphs.
+     * Uses textContent assignment (not innerHTML) for user messages to prevent XSS.
+     * @param {HTMLElement} bubble - The message bubble element
+     * @param {string} text - The raw message text
+     * @param {boolean} isAI - Whether this is an AI message (allows markdown)
+     */
+    renderTextContent(bubble, text, isAI) {
+        const paragraphs = text.split('\n\n');
+        paragraphs.forEach(paragraph => {
+            if (!paragraph.trim()) return;
+            const p = document.createElement('p');
+            if (isAI) {
+                // Render **bold** and *italic* safely — no raw HTML from user
+                p.innerHTML = paragraph.trim()
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
+            } else {
+                p.textContent = paragraph.trim();
+            }
+            bubble.appendChild(p);
+        });
+    }
+
     renderMessage(message) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${message.type}-message`;
         
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.innerHTML = message.type === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-user-tie"></i>';
+        // Elara uses a book-magic icon; users get a person icon
+        avatar.innerHTML = message.type === 'user'
+            ? '<i class="fas fa-user"></i>'
+            : '<i class="fas fa-book-open"></i>';
         
         const content = document.createElement('div');
         content.className = 'message-content';
@@ -351,15 +379,8 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
         
-        // Add text content
-        const paragraphs = message.content.split('\n\n');
-        paragraphs.forEach(paragraph => {
-            if (paragraph.trim()) {
-                const p = document.createElement('p');
-                p.textContent = paragraph.trim();
-                bubble.appendChild(p);
-            }
-        });
+        // Render text with markdown support for AI messages
+        this.renderTextContent(bubble, message.content, message.type === 'bookseller');
         
         // Add book recommendations if present
         if (message.books && message.books.length > 0) {
@@ -434,10 +455,10 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
         info.className = 'book-rec-info';
         
         const title = document.createElement('h4');
-        title.textContent = book.volumeInfo?.title || 'Unknown Title';
+        title.textContent = book.volumeInfo?.title || 'A Mysterious Tome';
         
         const author = document.createElement('p');
-        author.textContent = book.volumeInfo?.authors?.[0] || 'Unknown Author';
+        author.textContent = book.volumeInfo?.authors?.join(', ') || 'A Mysterious Pen';
         
         info.appendChild(title);
         info.appendChild(author);
@@ -485,12 +506,15 @@ Tell me what kind of vibe you're looking for - maybe something cozy for a rainy 
         
         typingDiv.innerHTML = `
             <div class="message-avatar">
-                <i class="fas fa-user-tie"></i>
+                <i class="fas fa-book-open"></i>
             </div>
             <div class="typing-bubble">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+                <span class="typing-label">Elara is finding your story</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
             </div>
         `;
         

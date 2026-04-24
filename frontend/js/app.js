@@ -78,7 +78,7 @@
  */
 
 const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE) ? CONFIG.API_BASE : 'https://www.googleapis.com/books/v1/volumes';
-const MOOD_API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.MOOD_API_BASE) ? CONFIG.MOOD_API_BASE : '/api/v1';
+const MOOD_API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.MOOD_API_BASE) ? CONFIG.MOOD_API_BASE : 'http://127.0.0.1:5000/api/v1';
 const IS_DEV = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
