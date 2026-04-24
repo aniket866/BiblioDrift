@@ -22,6 +22,7 @@ BiblioDrift is a cozy, visual-first book discovery platform designed to make fin
      No manual curation, static lists, or hardcoded recommendations are permitted.
 - **Dynamic Popups**: Click a book to see an expanded view with AI-generated blurbs.
 - **Curated Tables**: Horizontal scrolling lists based on moods like "Monsoon Reads".
+- **Elara, the Wise Bookseller**: An interactive AI persona who chats with you, remembers your mood, and hand-picks books like a real librarian.
 
 ## 🛠️ Tech Stack
 
