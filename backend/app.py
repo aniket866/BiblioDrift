@@ -1220,15 +1220,11 @@ def get_leaderboard():
     try:
         from sqlalchemy import func
 
-        # =========================================================================
-        # SQL Query Optimization
-        # This query has been optimized to resolve a severe N+1+N query pattern.
-        # Previously, `_get_yearly_stats` was called inside the leaderboard loop, 
-        # making additional queries per user. This made the database calls O(n).
-        # We now aggregate stats in a single SQL query using `GROUP BY user_id` 
-        # alongside the leaderboard goal query. By joining User and outer joining 
-        # ReadingStats, we sum `books_completed` and `pages_read` directly in SQL.
-        # =========================================================================
+        # Description
+        # where: app.py(get_leaderboard)
+        # issue: _get_yearly_stats is called inside the leaderboard loop, making additional queries per user
+        # why?: Combined with , this creates a severe N+1+N query pattern in the leaderboard endpoint, making it O(n) database calls.
+        # fix: Aggregate stats in a single SQL query using GROUP BY user_id alongside the leaderboard goal query.
         stats_query = db.session.query(
             ReadingGoal.user_id,
             User.username,
