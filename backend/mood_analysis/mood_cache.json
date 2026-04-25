@@ -196,5 +196,38 @@
         "confidence_threshold": 0.1
       }
     }
+  },
+  "the ambassador&#x27;s adventure|allen upward": {
+    "success": true,
+    "overall_sentiment": {
+      "compound_score": 0.9545,
+      "compound_median": 0.9545,
+      "compound_stdev": 0,
+      "positive_score": 0.202,
+      "negative_score": 0.033,
+      "textblob_polarity": 0.3119444444444444,
+      "average_confidence": 0.7890333333333334,
+      "sentiment_consistency": 1
+    },
+    "primary_moods": [],
+    "mood_description": "This book has a overwhelmingly positive reception.",
+    "bibliodrift_vibe": "Pure sunshine in paperback form.",
+    "analysis_confidence": 0.415,
+    "total_reviews_analyzed": 1,
+    "review_statistics": {
+      "average_length": 612,
+      "average_word_count": 97,
+      "average_rating": null,
+      "rating_distribution": {},
+      "total_helpful_votes": 0
+    },
+    "metadata": {
+      "analyzer_version": "2.0.0",
+      "analysis_timestamp": "2026-04-25T09:24:56.814493+00:00Z",
+      "config_used": {
+        "min_reviews": 3,
+        "confidence_threshold": 0.1
+      }
+    }
   }
 }
