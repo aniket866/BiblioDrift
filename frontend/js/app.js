@@ -77,8 +77,8 @@
  * ==============================================================================
  */
 
-const API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE) ? CONFIG.API_BASE : 'https://www.googleapis.com/books/v1/volumes';
-const MOOD_API_BASE = (typeof CONFIG !== 'undefined' && CONFIG.MOOD_API_BASE) ? CONFIG.MOOD_API_BASE : 'http://127.0.0.1:5000/api/v1';
+// API_BASE and MOOD_API_BASE are declared globally in config.js (loaded first).
+// Do NOT re-declare them here — use the globals from config.js directly.
 const IS_DEV = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -229,9 +229,6 @@ const SafeStorage = {
     get(key) {
         try {
             const value = localStorage.getItem(key);
-            if (value !== null) {
-                this.touchKey(key, value);
-            }
             return value;
         } catch (e) {
             return null;
@@ -1267,36 +1264,42 @@ class ThemeManager {
     constructor() {
         this.themeKey = 'bibliodrift_theme';
         this.toggleBtn = document.getElementById('themeToggle');
-        const stored = SafeStorage.get(this.themeKey);
+        // Read directly from localStorage — no abstraction layer
+        const stored = localStorage.getItem(this.themeKey);
         this.currentTheme = stored === 'night' ? 'night' : 'light';
-
+        // Named handler so we can remove & re-add cleanly (no stacking)
+        this._handler = this._onClick.bind(this);
         this.init();
     }
 
+    _onClick() {
+        this.currentTheme = this.currentTheme === 'night' ? 'light' : 'night';
+        this.applyTheme(this.currentTheme);
+        localStorage.setItem(this.themeKey, this.currentTheme);
+    }
 
     init() {
         if (!this.toggleBtn) return;
-
         this.applyTheme(this.currentTheme);
-
-        this.toggleBtn.addEventListener('click', () => {
-            this.currentTheme = this.currentTheme === 'night' ? 'light' : 'night';
-            this.applyTheme(this.currentTheme);
-            SafeStorage.set(this.themeKey, this.currentTheme);
-        });
+        // Remove before add to prevent duplicate listeners if init is called twice
+        this.toggleBtn.removeEventListener('click', this._handler);
+        this.toggleBtn.addEventListener('click', this._handler);
     }
 
-
     applyTheme(theme) {
-        const icon = this.toggleBtn.querySelector('i');
         if (theme === 'night') {
             document.documentElement.setAttribute('data-theme', 'night');
-            icon.classList.remove('fa-moon');
-            icon.classList.add('fa-sun');
         } else {
             document.documentElement.removeAttribute('data-theme');
-            icon.classList.remove('fa-sun');
-            icon.classList.add('fa-moon');
+        }
+        // Update icon — use className directly, cannot fail
+        if (this.toggleBtn) {
+            const icon = this.toggleBtn.querySelector('i');
+            if (icon) {
+                icon.className = theme === 'night'
+                    ? 'fa-solid fa-sun'
+                    : 'fa-solid fa-moon';
+            }
         }
     }
 }
@@ -1426,14 +1429,14 @@ class GenreManager {
 // --- Application Bootstrap ---
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 BiblioDrift Initializing...');
-    
+
     // 1. Initialize Managers
     const libManager = new LibraryManager();
     window.libManager = libManager;
-    
+
     window.renderer = new BookRenderer(libManager);
     const themeManager = new ThemeManager();
-    
+
     // 2. Load Config (Non-blocking)
     loadConfig();
 
@@ -1462,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (toggleLink && authTitle && authBtn && authForm) {
         let isLogin = true;
         authForm.dataset.mode = 'login';
-        
+
         toggleLink.addEventListener('click', () => {
             isLogin = !isLogin;
             authForm.dataset.mode = isLogin ? 'login' : 'register';
