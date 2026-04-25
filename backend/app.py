@@ -32,6 +32,7 @@ from price_tracker import get_price_tracker
 from cache_service import cache_service
 from validators import (
     validate_request,
+    validate_google_books_id,
     AnalyzeMoodRequest,
     MoodTagsRequest,
     MoodSearchRequest,
@@ -152,9 +153,9 @@ def add_security_headers(response):
     # - default-src 'self': Only allow resources from the same origin
     # - script-src 'self' https://cdn.jsdelivr.net: Allow scripts from self and DOMPurify CDN
     # - style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com: Allow styles from self and CDN
-    # - img-src 'self' data: https:: Allow images from self, data URLs, and HTTPS
+    # - img-src 'self' data: blob: https:: Allow images from self, data URLs, blob URLs, and HTTPS
     # - font-src 'self' https://fonts.gstatic.com: Allow fonts from self and Google Fonts
-    # - connect-src 'self' ws: wss:: Allow connections to own origin and WebSocket
+    # - connect-src 'self' ws: wss: https:: Allow connections to own origin, secure WebSocket, and HTTPS
     # - frame-ancestors 'none': Prevent framing/clickjacking
     # - base-uri 'self': Restrict base tag to same origin
     # - form-action 'self': Restrict form submissions to same origin
@@ -163,9 +164,9 @@ def add_security_headers(response):
         "default-src 'self'; "
         "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "img-src 'self' data: https: http:; "
+        "img-src 'self' data: blob: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-        "connect-src 'self' ws: wss: http: https:; "
+        "connect-src 'self' ws: wss: https:; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
@@ -937,6 +938,27 @@ def sync_library():
         
         if str(user_id) != str(current_user_id):
             return forbidden_error("Cannot sync to another user's library")
+
+        invalid_ids = []
+        for index, item_data in enumerate(raw_items):
+            if not isinstance(item_data, dict):
+                continue
+            raw_google_id = item_data.get('id')
+            if raw_google_id is None or not validate_google_books_id(str(raw_google_id).strip()):
+                invalid_ids.append((index, raw_google_id))
+
+        if invalid_ids:
+            for index, bad_value in invalid_ids:
+                logger.warning(
+                    "Rejected sync payload with invalid Google Books ID. user_id=%s item_index=%s id=%r",
+                    user_id,
+                    index,
+                    bad_value
+                )
+            return validation_error("Invalid Google Books ID format in sync payload")
+
+        # Sanitize the items list only after validating Google Books IDs.
+        items = sanitize_payload(raw_items)
         
         synced_count = 0
         conflicts = 0
@@ -1577,6 +1599,8 @@ def get_book_reviews(book_id):
         if book_id.isdigit():
             book = Book.query.get(int(book_id))
         else:
+            if not validate_google_books_id(book_id):
+                return validation_error("Invalid Google Books ID format")
             book = Book.query.filter_by(google_books_id=book_id).first()
         
         if not book:
@@ -1660,6 +1684,8 @@ def create_price_alert(book_id):
         if book_id.isdigit():
             book = Book.query.get(int(book_id))
         else:
+            if not validate_google_books_id(book_id):
+                return validation_error("Invalid Google Books ID format")
             book = Book.query.filter_by(google_books_id=book_id).first()
         
         if not book:

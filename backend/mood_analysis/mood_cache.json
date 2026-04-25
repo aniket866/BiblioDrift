@@ -229,5 +229,38 @@
         "confidence_threshold": 0.1
       }
     }
+  },
+  "alice&#x27;s adventures in wonderland|lewis carroll": {
+    "success": true,
+    "overall_sentiment": {
+      "compound_score": 0.2969181818181818,
+      "compound_median": 0.6261,
+      "compound_stdev": 0.7054048012569546,
+      "positive_score": 0.16063636363636363,
+      "negative_score": 0.10654545454545454,
+      "textblob_polarity": 0.1073446238086888,
+      "average_confidence": 0.6993014146033614,
+      "sentiment_consistency": 0.2945951987430454
+    },
+    "primary_moods": [],
+    "mood_description": "This book has a generally positive reception.",
+    "bibliodrift_vibe": "The literary equivalent of a perfect cup of tea.",
+    "analysis_confidence": 0.55,
+    "total_reviews_analyzed": 11,
+    "review_statistics": {
+      "average_length": 487.8181818181818,
+      "average_word_count": 86.72727272727273,
+      "average_rating": null,
+      "rating_distribution": {},
+      "total_helpful_votes": 0
+    },
+    "metadata": {
+      "analyzer_version": "2.0.0",
+      "analysis_timestamp": "2026-04-25T09:29:43.686525+00:00Z",
+      "config_used": {
+        "min_reviews": 3,
+        "confidence_threshold": 0.1
+      }
+    }
   }
 }
