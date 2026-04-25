@@ -1,7 +1,5 @@
-/**
- * BiblioDrift Configuration
- * Environment-specific configuration for portable deployment
- */
+// API Base URL - point to the local backend server
+const MOOD_API_BASE = 'http://127.0.0.1:5000/api/v1';
 
 const CONFIG = {
     // Google Books API - loaded from backend config endpoint
@@ -12,7 +10,7 @@ const CONFIG = {
     // Backend API Base - use relative path for proxy-aware deployment
     // In development: proxy to localhost:5000
     // In production: served from same origin
-    MOOD_API_BASE: '/api/v1',
+    MOOD_API_BASE: MOOD_API_BASE,
 
     // Google Books API endpoint
     API_BASE: 'https://www.googleapis.com/books/v1/volumes',
