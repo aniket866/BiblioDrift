@@ -132,10 +132,6 @@ function showToast(message, type = 'info') {
 }
 
 /**
- * Robust Wrapper for LocalStorage
- * Prevents application crashes when the 5MB quota is exceeded.
- */
-/**
  * Robust Wrapper for Storage (LocalStorage + IndexedDB Fallback)
  * Prevents application data loss and handles browser storage wipes/quotas.
  */
@@ -484,7 +480,6 @@ class BookRenderer {
                         <button class="btn-icon add-btn" title="Add to Library"><i class="fa-regular fa-heart"></i></button>
                         <button class="btn-icon info-btn" title="Read Details"><i class="fa-solid fa-info"></i></button>
                         <button class="btn-icon share-btn" title="Share Book"><i class="fa-solid fa-share-nodes"></i></button>
-                        <button class="btn-icon" title="Flip Back" onclick="event.stopPropagation(); this.closest('.book').classList.remove('flipped'); const s = new Audio('../assets/sounds/page-flip.mp3'); s.volume=0.5; s.play();"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="btn-icon flip-back-btn" title="Flip Back"><i class="fa-solid fa-rotate-left"></i></button>
                     </div>
                 </div>
@@ -1570,21 +1565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Load Config (Non-blocking)
     loadConfig();
 
-    // 3. Render Curated Discovery Section
-    const rows = [
-        { id: 'row-rainy', query: 'subject:mystery atmosphere' },
-        { id: 'row-indian', query: 'authors:arundhati roy|subject:india' },
-        { id: 'row-classics', query: 'subject:classic fiction' },
-        { id: 'row-fiction', query: 'subject:fiction' }
-    ];
 
-    for (const row of rows) {
-        if (document.getElementById(row.id)) {
-            window.renderer.renderCuratedSection(row.query, row.id).catch(e => {
-                console.error(`Row ${row.id} failed:`, e);
-            });
-        }
-    }
 
     // --- AUTH LOGIC ---
     const toggleLink = document.querySelector('.toggle-link');
@@ -1608,10 +1589,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const genreManager = new GenreManager(libManager);
     genreManager.init();
     const exportBtn = document.getElementById("export-library");
-
     if (exportBtn) {
         const isLibraryPage = document.getElementById("shelf-want");
         exportBtn.style.display = isLibraryPage ? "inline-flex" : "none";
+
+        exportBtn.addEventListener("click", () => {
+            const library = SafeStorage.get("bibliodrift_library");
+            if (!library) {
+                showToast("Library is empty!", "info");
+                return;
+            }
+            const blob = new Blob([library], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `bibliodrift_library_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            URL.revokeObjectURL(url);
+            showToast("Library exported successfully!", "success");
+        });
     }
 
 
@@ -1767,36 +1767,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-
         backToTopBtn.addEventListener('click', () => {
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
             });
         });
-
-        const exportBtn = document.getElementById("export-library");
-        if (exportBtn) {
-            exportBtn.addEventListener("click", () => {
-                const library = SafeStorage.get("bibliodrift_library");
-                if (!library) {
-                    showToast("Library is empty!", "info");
-                    return;
-                }
-                const blob = new Blob([library], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `bibliodrift_library_${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                URL.revokeObjectURL(url);
-                showToast("Library exported successfully!", "success");
-            });
-        }
     }
 });
 
